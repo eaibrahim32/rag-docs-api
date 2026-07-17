@@ -8,18 +8,27 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 is what the Dockerfile ships; 3.12 is what Codespaces gives you.
+        # Test both so the two environments cannot silently drift apart.
+        python-version: ["3.11", "3.12"]
     env:
       ENV: test
       EMBEDDING_BACKEND: hash
       CACHE_ENABLED: "false"
-      SQL_URL: sqlite+aiosqlite:///:memory:
+      # Quote this. Unquoted, the trailing colon of ":memory:" terminates the
+      # plain scalar and YAML parses the line as a nested mapping.
+      SQL_URL: "sqlite+aiosqlite:///:memory:"
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
           cache: pip
+          cache-dependency-path: requirements-dev.txt
 
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
