@@ -1,0 +1,41 @@
+{
+  "name": "rag-docs-api",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  // Deliberately NOT pinning hostRequirements.cpus. It sets a *minimum*, so
+  // requiring 4 cores would lock out 2-core machines and burn the free Codespaces
+  // quota twice as fast (120 core-hours = 60h on 2-core, 30h on 4-core).
+  //   2-core  -> make test, make lint, make run       (plenty)
+  //   4-core  -> make up with Ollama                  (pick at creation time)
+  "hostRequirements": {
+    "storage": "32gb"
+  },
+
+  "postCreateCommand": "pip install --user -r requirements-dev.txt",
+
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": { "label": "RAG Docs API", "onAutoForward": "notify" }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.testing.pytestEnabled": true,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true
+        }
+      }
+    }
+  }
+}

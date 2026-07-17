@@ -1,0 +1,78 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      ENV: dev
+      SQL_URL: postgresql+asyncpg://rag:ragpass@postgres:5432/ragdocs
+      MONGO_URL: mongodb://mongo:27017
+      REDIS_URL: redis://redis:6379/0
+      CHROMA_DIR: /app/data/chroma
+      LLM_BACKEND: ollama
+      OLLAMA_URL: http://ollama:11434
+      # llama3.2:1b runs on a 2-core/8GB Codespace. Use llama3.1:8b only if you
+      # have ~8GB free for the model alone, or point LLM_BACKEND at openai.
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:1b}
+    volumes:
+      - api_data:/app/data
+      - model_cache:/home/app/.cache/chroma
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: ragpass
+      POSTGRES_DB: ragdocs
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag -d ragdocs"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  api_data:
+  model_cache:
+  pg_data:
+  mongo_data:
+  redis_data:
+  ollama_data:

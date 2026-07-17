@@ -1,0 +1,27 @@
+# Pinned to versions the test suite is actually validated against.
+
+# --- web ---
+fastapi==0.139.1
+uvicorn[standard]==0.51.0
+python-multipart==0.0.32
+pydantic==2.13.4
+pydantic-settings==2.14.2
+
+# --- storage ---
+sqlalchemy[asyncio]==2.0.51
+aiosqlite==0.22.1
+asyncpg==0.30.0
+motor==3.7.1
+redis==8.0.1
+chromadb==1.5.9
+
+# --- rag ---
+# No sentence-transformers / torch on purpose: EMBEDDING_BACKEND=onnx uses the
+# same all-MiniLM-L6-v2 model through onnxruntime, which chromadb already pulls
+# in. Installing torch would add ~2.5 GB of CUDA wheels that a CPU host never
+# executes. For a GPU host: pip install sentence-transformers, then set
+# EMBEDDING_BACKEND=sentence_transformers.
+pypdf==5.9.0
+python-docx==1.2.0
+beautifulsoup4==4.14.3
+httpx==0.28.1
