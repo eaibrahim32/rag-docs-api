@@ -6,8 +6,20 @@ help:
 install: ## Install dev dependencies
 	pip install -r requirements-dev.txt
 
-test: ## Run the test suite (no Docker required)
+test: ## Run unit tests — no Docker, no network, no services
 	pytest --cov=app --cov-report=term-missing
+
+test-integration: ## Run integration tests against LIVE Postgres/Mongo/Redis (make services first)
+	pytest tests/integration
+
+test-all: ## Unit + integration
+	pytest tests/unit tests/integration
+
+services: ## Start only the datastores, for integration tests
+	docker compose up -d postgres mongo redis
+	@echo "Waiting for health..."
+	@sleep 8
+	@echo "Now run: make test-integration"
 
 lint: ## Lint and format-check
 	ruff check app tests

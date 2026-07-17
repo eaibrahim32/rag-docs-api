@@ -1,7 +1,10 @@
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-testpaths = ["tests"]
+# Default run is unit-only: no Docker, no network, no services. Integration is
+# opt-in via an explicit path (`pytest tests/integration`), so a missing database
+# can never silently turn into a skipped-and-forgotten test.
+testpaths = ["tests/unit"]
 addopts = "-q"
 
 [tool.ruff]

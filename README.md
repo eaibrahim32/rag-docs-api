@@ -151,14 +151,29 @@ Supported formats: PDF, DOCX, TXT, MD, HTML, CSV.
 
 ## Testing
 
+Two layers, and the split is deliberate.
+
 ```bash
-make test
-# 52 passed — 74% coverage
+make test              # 52 unit tests — no Docker, no network, ~14s
+make services          # start Postgres + Mongo + Redis
+make test-integration  # 47 integration tests against those live services
 ```
 
-Tests run against fakes for Mongo, Redis and the LLM, and a deterministic hashing embedder — so CI needs no Docker, no network and no 90 MB model download, while the chunker, fusion, indexing and API code under test are the same code that runs in production.
+**Unit** (`tests/unit`) fakes Mongo, Redis and the LLM and swaps in a deterministic
+hashing embedder, so it runs anywhere in seconds with no Docker, no network and no
+model download. It covers what breaks quietly: chunk boundaries and overlap, RRF
+ranking, cache-key normalisation, HTTP error contracts, and a full
+upload → ingest → index → retrieve → delete round trip.
 
-The suite covers the parts that break quietly: chunk boundary handling and overlap, RRF ranking behaviour, cache key normalisation, HTTP error contracts, and a full upload → ingest → index → retrieve → delete round trip including LLM-outage handling.
+**Integration** (`tests/integration`) fakes nothing. Real PostgreSQL, real MongoDB
+(including the text index behind hybrid search's keyword leg), real Redis, real ONNX
+embeddings, and the real httpx client driven against a stub server that speaks
+Ollama's wire format. It asserts things SQLite and fakes will happily let past:
+timezone-aware timestamps, Mongo text-score ranking, cache TTL expiry and
+invalidation-on-ingest, and that a cache hit never reaches the model at all.
+
+Both run on every push. CI is free on public repos, so the integration job is the
+proof — not a screenshot of a stack someone once ran locally.
 
 ---
 
@@ -168,7 +183,7 @@ The suite covers the parts that break quietly: chunk boundary handling and overl
 - **Typed errors** (`AppError` subclasses) mapped to HTTP status + stable machine-readable codes by one handler
 - **Multi-stage Docker build** — build toolchain stays out of the runtime image; runs as non-root with a healthcheck
 - **Compose healthchecks + `depends_on: condition: service_healthy`** so the API doesn't race its databases on boot
-- **CI**: ruff lint → pytest with coverage → Docker build with layer caching
+- **CI**: ruff → unit tests on Python 3.11 and 3.12 → integration tests against live Postgres/Mongo/Redis service containers → Docker build with layer caching
 - **12-factor config** — every value environment-overridable via pydantic-settings, no secrets in the repo
 
 ---
